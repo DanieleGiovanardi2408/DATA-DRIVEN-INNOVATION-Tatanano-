@@ -1,0 +1,76 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+# ---- Funzione logistica ----
+def logistic(t, L, k, t0):
+    """Curva logistica classica."""
+    return L / (1 + np.exp(-k * (t - t0)))
+
+# ---- Funzione per fit della curva logistica ----
+def fit_logistic(x, y):
+    """
+    Fit di una curva logistica ai dati.
+    Parametri iniziali:
+    L: massimo delle vendite cumulative
+    k: tasso di crescita iniziale
+    t0: anno di flesso
+    """
+    p0 = [y.max(), 0.3, np.median(x)]
+    params, _ = curve_fit(logistic, x, y, p0=p0, maxfev=10000)
+    return params
+
+# ---- Caricamento del dataset ----
+def load_dataset(path, year_col="Anno", sales_col="Vendite_cumulative"):
+    df = pd.read_csv(path)
+    x = df[year_col].values
+    y = df[sales_col].values
+    return x, y
+
+# ---- Funzione per generare il grafico ----
+def plot_s_curve(x, y, title="S-Curve of Adoption - Tata Nano", color="#1f77b4"):
+    # Fit della curva logistica
+    L, k, t0 = fit_logistic(x, y)
+    
+    # Generazione curva liscia
+    x_fit = np.linspace(x.min(), x.max(), 300)
+    y_fit = logistic(x_fit, L, k, t0)
+    
+    # Creazione del grafico
+    plt.figure(figsize=(12,7))
+    plt.style.use('ggplot')
+    
+    # Dati reali
+    plt.scatter(x, y, color=color, label="Real Data", s=60, zorder=5)
+    
+    # Curva stimata
+    plt.plot(x_fit, y_fit, color=color, linewidth=3, label="Fitted S-curve")
+    
+    # Annotazioni automatiche
+    plt.annotate(f"L={int(L)}", xy=(x_fit[-1], L),
+                 xytext=(x_fit[-1]+0.5, L + 0.05*L),
+                 arrowprops=dict(facecolor=color, arrowstyle="->"), fontsize=12)
+    plt.annotate(f"t0={t0:.1f}", xy=(t0, L/2),
+                 xytext=(t0+0.5, L/2 + 0.05*L),
+                 arrowprops=dict(facecolor=color, arrowstyle="->"), fontsize=12)
+    
+    # Etichette e titolo
+    plt.xlabel("Year", fontsize=14)
+    plt.ylabel("Cumulative sales", fontsize=14)
+    plt.title(title, fontsize=16, weight='bold')
+    plt.legend(fontsize=12)
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+    
+    # Restituisce parametri stimati
+    return {"L": L, "k": k, "t0": t0}
+
+# ---- Esecuzione ----
+dataset_path = "tata_nano_sales_dataset.csv"  
+x_nano, y_nano = load_dataset(dataset_path)
+params_nano = plot_s_curve(x_nano, y_nano)
+
+print("Parametri stimati della S-curve:")
+print(params_nano)
